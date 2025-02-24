@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        /* Reset default margin and padding */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Body styling with gradient background and centering */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+            text-align: center;
+            animation: gradientAnimation 10s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        /* Gradient animation for the background */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Heading styling */
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Form container styling */
+        .form-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Hover effect for form container */
+        .form-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Button styling */
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #2575fc;
+            color: white;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        /* Button hover effect */
+        button:hover {
+            background-color: #6a11cb;
+            transform: scale(1.05);
+        }
+
+        /* Link styling */
+        .form-toggle {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        /* Link hover effect */
+        .form-toggle:hover {
+            color: #ffcc00;
+            text-decoration: underline;
+        }
+
+        /* Remove default link styling */
+        a {
+            text-decoration: none;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .form-container {
+                padding: 20px;
+                width: 90%;
+            }
+
+            button {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Home Page</h1>
+
+    <!-- Login Form Link -->
+    <div class="form-container" id="login-form">
+        <a href="{% url 'login' %}">
+            <button>Login</button>
+        </a>
+        <a href="{% url 'register' %}" class="form-toggle">Don't have an account? Register</a>
+    </div>
+
+    <!-- Registration Form Link -->
+    <div class="form-container" id="register-form" style="display:none;">
+        <a href="{% url 'register' %}">
+            <button>Register</button>
+        </a>
+        <a href="{% url 'login' %}" class="form-toggle">Already have an account? Login</a>
+    </div>
+</body>
+</html>
