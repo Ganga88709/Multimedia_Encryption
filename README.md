@@ -54,7 +54,7 @@ multimedia-encryption-decryption/
 - **Python 3.x**
 - **MySQL Server**
 - **Django** (see `src/requirements.txt` for specific versions)
-- Required libraries: `cryptography`, and either `mysqlclient` or `PyMySQL`
+- **Required libraries:** `cryptography`, and either `mysqlclient` or `PyMySQL`
 
   ## Installation and Setup
 
@@ -63,26 +63,26 @@ multimedia-encryption-decryption/
    git clone https://github.com/yourusername/multimedia-encryption-decryption.git
    cd multimedia-encryption-decryption
 
-2. **Create and Activate a Virtual Environment (Recommended):**
+3. **Create and Activate a Virtual Environment (Recommended):**
 
    python -m venv venv
 
    On Windows: venv\Scripts\activate
    On macOS/Linux: source venv/bin/activate
 
-3. **Install Dependencies:**
+5. **Install Dependencies:**
 
    pip install -r src/requirements.txt
 
-4. **Database Configuration:**
+6. **Database Configuration:**
 
    Use either:
 
-   -**mysqlclient:**
+   - **mysqlclient:**
 
    pip install mysqlclient
 
-   -**PyMySQL (alternative):**
+   - **PyMySQL (alternative):**
 
    pip install PyMySQL
 
