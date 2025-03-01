@@ -100,24 +100,24 @@ multimedia-encryption-decryption/
 
 2. **Update Django Settings:**
 
-In src/your_project/settings.py, update the DATABASES section with your MySQL credentials:
+    In src/your_project/settings.py, update the DATABASES section with your MySQL credentials:
 
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'multimedia_encryption',  # Your database name
-            'USER': 'your_mysql_username',    # Your MySQL username
-            'PASSWORD': 'your_mysql_password',# Your MySQL password
-            'HOST': 'your_mysql_host',        # e.g., "127.0.0.1" or a remote host
-            'PORT': '3306',                   # Default MySQL port
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': 'multimedia_encryption',  # Your database name
+                'USER': 'your_mysql_username',    # Your MySQL username
+                'PASSWORD': 'your_mysql_password',# Your MySQL password
+                'HOST': 'your_mysql_host',        # e.g., "127.0.0.1" or a remote host
+                'PORT': '3306',                   # Default MySQL port
+            }
         }
-    }
 
 3. **Run Migrations:**
 
-Navigate to the src directory and run:
+    Navigate to the src directory and run:
 
-    python manage.py makemigrations
-    python manage.py migrate
+        python manage.py makemigrations
+        python manage.py migrate
 
-This will automatically create the required tables in your MySQL database.
+    This will automatically create the required tables in your MySQL database.
