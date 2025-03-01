@@ -46,7 +46,7 @@ multimedia-encryption-decryption/
 ├── report/                        # Project report.
 │   └── Project_Report.pdf         # Detailed project report in PDF format.
 └── results/                       # Results and metrics.
-    └── metrics.txt                # Performance metrics and test results.
+    └── metrics.txt                # Performance metrics and test results.```
 
 
 ## Prerequisites
