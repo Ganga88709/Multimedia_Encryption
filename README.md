@@ -136,11 +136,8 @@ multimedia-encryption-decryption/
 
 3. **Encryption Workflow:**
   - Log in with your credentials.
-   
   - Navigate to the encryption page.
-
   - Upload a multimedia file and enter the receiver's username.
-
   - Click "Encrypt". The encrypted file will be stored on the C drive under C:\encrypted_media.
 
 4 **Decryption Workflow:**
