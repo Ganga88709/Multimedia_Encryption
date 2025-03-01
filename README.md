@@ -121,3 +121,31 @@ multimedia-encryption-decryption/
         python manage.py migrate
 
     This will automatically create the required tables in your MySQL database.
+
+## **Execution Steps**
+
+1. **Run the Django Development Server:**
+
+   From the src directory, run:
+
+       python manage.py runserver
+
+2. **Access the Application:**
+
+   Open your browser and navigate to: http://127.0.0.1:8000/
+
+3. **Encryption Workflow:**
+  - Log in with your credentials.
+   
+  - Navigate to the encryption page.
+
+  - Upload a multimedia file and enter the receiver's username.
+
+  - Click "Encrypt". The encrypted file will be stored on the C drive under C:\encrypted_media.
+
+4 **Decryption Workflow:**
+
+  - Log in as the intended receiver.
+  - Enter the sender's username and the path to the encrypted file.
+  - Click "Decrypt". The decrypted file will be saved on the C drive under C:\decrypted_media.
+  - If decryption fails (e.g., due to an incorrect sender username), an alert will notify you.
