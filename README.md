@@ -68,6 +68,7 @@ multimedia-encryption-decryption/
    python -m venv venv
 
    On Windows: venv\Scripts\activate
+   
    On macOS/Linux: source venv/bin/activate
 
 5. **Install Dependencies:**
@@ -87,5 +88,7 @@ multimedia-encryption-decryption/
    pip install PyMySQL
 
    If using PyMySQL, add the following to your project’s __init__.py file:
+   
    import pymysql
+   
    pymysql.install_as_MySQLdb()
