@@ -27,7 +27,7 @@ This project implements a multimedia encryption and decryption system using asym
 - **File Storage:** Encrypted and decrypted files are stored in designated directories on the C drive.
 - **Error Handling:** Displays user-friendly alerts when decryption fails.
 
-  ## Repository Structure
+## Repository Structure
 
 ```plaintext
 multimedia-encryption-decryption/
@@ -56,26 +56,31 @@ multimedia-encryption-decryption/
 - **Django** (see `src/requirements.txt` for specific versions)
 - **Required libraries:** `cryptography`, and either `mysqlclient` or `PyMySQL`
 
-  ## Installation and Setup
+## Installation and Setup
 
 1. **Clone the Repository:**
 
        git clone https://github.com/yourusername/multimedia-encryption-decryption.git
+
+2. **Navigate to the Project Directory:**
+    
        cd multimedia-encryption-decryption
 
 3. **Create and Activate a Virtual Environment (Recommended):**
 
        python -m venv venv
 
-   On Windows: venv\Scripts\activate
+   **On Windows:** venv\Scripts\activate
    
-   On macOS/Linux: source venv/bin/activate
+   **On macOS/Linux:** source venv/bin/activate
 
-5. **Install Dependencies:**
+4. **Install Dependencies:**
 
        pip install -r src/requirements.txt
 
-6. **Database Configuration:**
+## **Database Configuration:**
+
+1. **Install a MySQL Client:**
 
    Use either:
 
@@ -92,3 +97,27 @@ multimedia-encryption-decryption/
        import pymysql
    
        pymysql.install_as_MySQLdb()
+
+2. **Update Django Settings:**
+
+In src/your_project/settings.py, update the DATABASES section with your MySQL credentials:
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'multimedia_encryption',  # Your database name
+            'USER': 'your_mysql_username',    # Your MySQL username
+            'PASSWORD': 'your_mysql_password',# Your MySQL password
+            'HOST': 'your_mysql_host',        # e.g., "127.0.0.1" or a remote host
+            'PORT': '3306',                   # Default MySQL port
+        }
+    }
+
+3. **Run Migrations:**
+
+Navigate to the src directory and run:
+
+    python manage.py makemigrations
+    python manage.py migrate
+
+This will automatically create the required tables in your MySQL database.
