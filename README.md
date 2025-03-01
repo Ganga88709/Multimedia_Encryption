@@ -79,15 +79,15 @@ multimedia-encryption-decryption/
 
    Use either:
 
-   - **mysqlclient:**
+   **mysqlclient:**
 
-   pip install mysqlclient
+       pip install mysqlclient
 
-   - **PyMySQL (alternative):**
+   **PyMySQL (alternative):**
 
-   pip install PyMySQL
+       pip install PyMySQL
 
-   If using PyMySQL, add the following to your project’s __init__.py file:
+   If using PyMySQL, add the following to your project’s `__init__.py` file:
    
    import pymysql
    
