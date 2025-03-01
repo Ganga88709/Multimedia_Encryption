@@ -27,30 +27,27 @@ This project implements a multimedia encryption and decryption system using asym
 - **File Storage:** Encrypted and decrypted files are stored in designated directories on the C drive.
 - **Error Handling:** Displays user-friendly alerts when decryption fails.
 
-## Repository Structure
+  ## Repository Structure
 
-  multimedia-encryption-decryption/
-│
-├── README.txt                  - This file.
-├── src/                        - Source code files (Django project, encryption modules, etc.)
-│     ├── manage.py
-│     ├── encrypt_decrypt/
-│     │      ├── views.py
-│     │      ├── models.py
-│     │      └── ... (other source files)
-│     └── requirements.txt      - Python package requirements.
-│
-├── executable/                 - Compiled executable file (if applicable)
-│     └── multimedia_project.exe    - Example for Windows.
-│
-├── database/                   - Database files.
-│     └── schema.sql            - SQL script to create and initialize the database tables.
-│
-├── report/                     - Project report.
-│     └── Project_Report.pdf    - Detailed project report in PDF format.
-│
-└── results/                    - Results and metrics.
-      └── metrics.txt           - File containing performance data, encryption/decryption times, etc.
+```plaintext
+multimedia-encryption-decryption/
+├── README.md                      # Overview, installation, and usage instructions.
+├── src/                           # Django project source code.
+│   ├── manage.py                  # Django's command-line utility.
+│   ├── encrypt_decrypt/           # App with encryption/decryption logic.
+│   │   ├── views.py               # Business logic for encryption/decryption.
+│   │   ├── models.py              # Data models.
+│   │   ├── urls.py                # URL routing for the app.
+│   │   └── templates/             # HTML templates.
+│   │         └── encrypt_decrypt.html  # Main UI template.
+│   └── requirements.txt           # Python package dependencies.
+├── executable/                    # Compiled executable (if applicable).
+│   └── multimedia_project.exe     # Example executable for Windows.
+├── report/                        # Project report.
+│   └── Project_Report.pdf         # Detailed project report in PDF format.
+└── results/                       # Results and metrics.
+    └── metrics.txt                # Performance metrics and test results.
+
 
 ## Prerequisites
 
@@ -58,3 +55,37 @@ This project implements a multimedia encryption and decryption system using asym
 - **MySQL Server**
 - **Django** (see `src/requirements.txt` for specific versions)
 - Required libraries: `cryptography`, and either `mysqlclient` or `PyMySQL`
+
+  ## Installation and Setup
+
+1. **Clone the Repository:**
+
+   git clone https://github.com/yourusername/multimedia-encryption-decryption.git
+   cd multimedia-encryption-decryption
+
+2. **Create and Activate a Virtual Environment (Recommended):**
+
+   python -m venv venv
+
+   On Windows: venv\Scripts\activate
+   On macOS/Linux: source venv/bin/activate
+
+3. **Install Dependencies:**
+
+   pip install -r src/requirements.txt
+
+4. **Database Configuration:**
+
+   Use either:
+
+   -**mysqlclient:**
+
+   pip install mysqlclient
+
+   -**PyMySQL (alternative):**
+
+   pip install PyMySQL
+
+   If using PyMySQL, add the following to your project’s __init__.py file:
+   import pymysql
+   pymysql.install_as_MySQLdb()
