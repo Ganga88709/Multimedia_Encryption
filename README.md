@@ -60,12 +60,12 @@ multimedia-encryption-decryption/
 
 1. **Clone the Repository:**
 
-   git clone https://github.com/yourusername/multimedia-encryption-decryption.git
-   cd multimedia-encryption-decryption
+       git clone https://github.com/yourusername/multimedia-encryption-decryption.git
+       cd multimedia-encryption-decryption
 
 3. **Create and Activate a Virtual Environment (Recommended):**
 
-   python -m venv venv
+       python -m venv venv
 
    On Windows: venv\Scripts\activate
    
@@ -73,7 +73,7 @@ multimedia-encryption-decryption/
 
 5. **Install Dependencies:**
 
-   pip install -r src/requirements.txt
+       pip install -r src/requirements.txt
 
 6. **Database Configuration:**
 
@@ -89,6 +89,6 @@ multimedia-encryption-decryption/
 
    If using PyMySQL, add the following to your project’s `__init__.py` file:
    
-   import pymysql
+       import pymysql
    
-   pymysql.install_as_MySQLdb()
+       pymysql.install_as_MySQLdb()
