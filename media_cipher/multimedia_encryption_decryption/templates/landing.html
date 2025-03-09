@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <!-- Font Awesome CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        /* General Reset and Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        /* Navigation Bar Styling */
+        nav {
+            background-color: #330960;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        nav .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Container Styling */
+        .container {
+            width: 100%;
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            max-width: 960px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #330960;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .box-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        /* Box Styling */
+        .box {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 30%; /* Align 3 boxes in a row */
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .box:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .box img {
+            width: 100%;
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .box:hover img {
+            transform: scale(1.05);
+        }
+
+        .box h3 {
+            font-size: 1.2em;
+            color: #333;
+            font-weight: 500;
+            margin-top: 10px;
+            letter-spacing: 1px;
+            text-transform: capitalize;
+        }
+
+        .box a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* About Us section */
+        .about-us {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .about-us h3 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .social-links {
+            margin-top: 20px;
+        }
+        /* Social Links Styling */
+    .social-links i {
+    font-size: 32px; /* Adjust the size */
+    margin: 0 10px;
+    cursor: pointer;
+    color: #330960; /* Set your desired color */
+    transition: transform 0.3s ease, color 0.3s ease; /* Smooth transition for color/size changes */
+}
+
+.social-links i:hover {
+    transform: scale(1.2); /* Slightly increase size on hover */
+    color: #4CAF50; /* Change to another color on hover */
+}
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .box-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .box {
+                width: 80%;
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+                margin-bottom: 25px;
+            }
+
+            .social-links {
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="logo">MyApp Logo</div>
+        <div>
+            <a href="#"></a>
+            <a href="#about-us">About Us</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1><b>Multimedia Encryption and Decryption Platform</b></h1>
+
+        <div class="box-container">
+            <!-- Box for Encrypt Text -->
+            <div class="box">
+                <a href="{% url 'encrypt_text' %}">
+                    <img src="https://media.istockphoto.com/id/1285093392/vector/t-letter-hand-drawn-symbol-vector-illustration-of-a-big-english-letter-t-hand-drawn-black.jpg?s=612x612&w=0&k=20&c=ZE_uaIcW-fiX6xX1ufewejV70qcH4TJ8tvulZt4mHes=" alt="Text Box">
+                    <h3>Text</h3>
+                    </a>
+            </div>
+
+            <!-- Box for Image -->
+            <div class="box">
+                <a href="{% url 'encrypt_image' %}">
+                <img src="https://media.istockphoto.com/id/1180410208/vector/landscape-image-gallery-with-the-photos-stack-up.jpg?s=612x612&w=0&k=20&c=G21-jgMQruADLPDBk7Sf1vVvCEtPiJD3Rf39AeB95yI=" alt="Image Box">
+                <h3>Image</h3>
+                </a>
+            </div>
+
+            <!-- Box for Video -->
+            <div class="box">
+                <a href="{% url 'encrypt_video' %}">
+                <img src="https://static.vecteezy.com/system/resources/previews/020/096/450/non_2x/video-camera-icon-in-comic-style-movie-play-cartoon-illustration-pictogram-video-streaming-business-concept-splash-effect-vector.jpg" alt="Video Box">
+                <h3>Video</h3>
+                </a>
+            </div>
+
+            <!-- Box for Audio -->
+            <div class="box">
+                <a href="{% url 'audio_encrypt_decrypt' %}">
+                <img src="https://png.pngtree.com/png-clipart/20230919/original/pngtree-loudspeakermegaphone-icon-vector-illustrationflat-design-speaker-symbol-sound-vector-png-image_12441901.png" alt="Audio Box">
+                <h3>Audio</h3>
+                </a>
+            </div>
+
+            <!-- Box for Document -->
+            <div class="box">
+                <a href="{% url 'encrypt_document' %}">
+                <img src="https://thumbs.dreamstime.com/b/document-papers-pile-line-icon-outline-vector-sign-linear-style-pictogram-isolated-white-symbol-logo-illustration-editable-95888572.jpg" alt="Document Box">
+                <h3>File</h3>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Us Section -->
+    <div class="about-us" id="about-us">
+        <h3>About Us</h3>
+        <p>We are a platform providing encrypted multimedia services.</p>
+        <div class="social-links">
+            <a href="mailto:contact@myapp.com" target="_blank">
+                <i class="fas fa-envelope"></i>
+            </a>
+            <a href="https://wa.me/1234567890" target="_blank">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+            <a href="https://www.facebook.com/myapp" target="_blank">
+                <i class="fab fa-facebook"></i>
+            </a>
+            <a href="https://www.instagram.com/myapp" target="_blank">
+                <i class="fab fa-instagram"></i>
+            </a>
+            <a href="https://twitter.com/myapp" target="_blank">
+                <i class="fab fa-twitter"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 MyApp. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
