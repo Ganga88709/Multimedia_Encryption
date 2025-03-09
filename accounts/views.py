@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import os
 from django.http import JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
-
+from text_encryptor import settings
 def home(request):
     return render(request,'home.html')
 
@@ -81,58 +81,77 @@ def login(request):
 def landing(request):
     return render(request,"landing.html")
 
+from django.http import HttpResponse
+import io
+
 def encrypt_text(request):
     if request.method == "POST":
-        receiver_username = request.POST.get("receiver_username")
-        input_text = request.POST.get("input_text")
+        try:
+            receiver_username = request.POST.get("receiver_username")
+            input_text = request.POST.get("input_text")
 
-        # Fetch current user's private key
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(),
-            password=None,
-            backend=default_backend()
-        )
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
 
-        # Fetch receiver's public key
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(
-            receiver_keys.public_key.encode(),
-            backend=default_backend()
-        )
+            # Fetch receiver's public key
+            receiver = get_object_or_404(User, username=receiver_username)
+            receiver_keys = get_object_or_404(UserKeys, user=receiver)
+            public_key = serialization.load_pem_public_key(
+                receiver_keys.public_key.encode(),
+                backend=default_backend()
+            )
 
-        # Derive shared key using ECDH
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'handshake data',
-            backend=default_backend()
-        ).derive(shared_key)
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
 
-        # Encrypt the text using AES
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        encrypted_data = encryptor.update(input_text.encode()) + encryptor.finalize()
+            # Encrypt the text using AES
+            iv = os.urandom(16)
+            cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+            encrypted_data = encryptor.update(input_text.encode()) + encryptor.finalize()
 
-        # Combine IV and encrypted data for storage
-        combined_data = iv + encrypted_data
-        encrypted_text = base64.b64encode(combined_data).decode()
+            # Combine IV and encrypted data
+            combined_data = iv + encrypted_data
+            encrypted_text = base64.b64encode(combined_data).decode()
 
-        return render(request, "encrypt_text.html", {"encrypted_text": encrypted_text})
-    return render(request, "encrypt_text.html")
+            # Create response with encrypted text as downloadable file
+            response = HttpResponse(encrypted_text, content_type='text/plain')
+            response['Content-Disposition'] = 'attachment; filename="encrypted_text.txt"'
+            return response
 
+        except Exception as e:
+            print("Encryption Error:", str(e))
+            return render(request, "text_encrypt_decrypt.html", 
+                        {"error": f"Encryption failed: {str(e)}"})
+
+    return render(request, "text_encrypt_decrypt.html")
 
 def decrypt_text(request):
     if request.method == "POST":
-        sender_username = request.POST.get("sender_username")
-        encrypted_text = request.POST.get("encrypted_text")
-
         try:
+            sender_username = request.POST.get("sender_username")
+            encrypted_file = request.FILES.get("encrypted_file")
+
+            if not encrypted_file:
+                return render(request, "text_encrypt_decrypt.html", 
+                            {"error": "Please upload an encrypted file"})
+
+            # Read the encrypted text from the uploaded file
+            encrypted_text = encrypted_file.read().decode('utf-8')
+
             # Fetch current user's private key
             current_user = request.user
             current_user_keys = get_object_or_404(UserKeys, user=current_user)
@@ -168,22 +187,23 @@ def decrypt_text(request):
             decryptor = cipher.decryptor()
             decrypted_text = decryptor.update(encrypted_data) + decryptor.finalize()
 
-            # Try decoding as UTF-8
-            try:
-                decrypted_text = decrypted_text.decode("utf-8")
-            except UnicodeDecodeError:
-                # If decoding fails, encode the binary data in Base64
-                decrypted_text = base64.b64encode(decrypted_text).decode("utf-8")
+            # Decode the decrypted text
+            decrypted_text = decrypted_text.decode('utf-8')
 
-            return render(request, "encrypt_text.html", {"decrypted_text": decrypted_text,"decryption_attempted": True})
+            # Create response with decrypted text as downloadable file
+            response = HttpResponse(decrypted_text, content_type='text/plain')
+            response['Content-Disposition'] = 'attachment; filename="decrypted_text.txt"'
+            return response
 
         except Exception as e:
             print("Decryption Error:", str(e))
-            return render(request, "encrypt_text.html", {"decrypted_text": "","decryption_attempted": True})
+            return render(request, "text_encrypt_decrypt.html", 
+                        {"error": f"Decryption failed: {str(e)}"})
 
-    return render(request, "encrypt_text.html",{"decryption_attempted": False})
+    return render(request, "text_encrypt_decrypt.html")
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from .models import UserKeys
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization, hashes
@@ -192,6 +212,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import os
 import base64
+import tempfile
 
 def audio_encrypt_decrypt(request):
     """
@@ -201,65 +222,88 @@ def audio_encrypt_decrypt(request):
 
 def encrypt_audio(request):
     """
-    Handles audio encryption and returns the encrypted data.
+    Handles audio encryption and returns the encrypted file for download.
     """
     if request.method == "POST":
-        receiver_username = request.POST.get("receiver_username")
-        audio_file = request.FILES.get("audio_file")
+        try:
+            receiver_username = request.POST.get("receiver_username")
+            audio_file = request.FILES.get("audio_file")
+            
+            if not audio_file:
+                return render(request, "audio_encrypt_decrypt.html", 
+                            {"error": "Please select an audio file"})
 
-        # Fetch current user's private key
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(),
-            password=None,
-            backend=default_backend()
-        )
+            # Get original file extension
+            file_extension = os.path.splitext(audio_file.name)[1]
 
-        # Fetch receiver's public key
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(
-            receiver_keys.public_key.encode(),
-            backend=default_backend()
-        )
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
 
-        # Derive shared key using ECDH
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'handshake data',
-            backend=default_backend()
-        ).derive(shared_key)
+            # Fetch receiver's public key
+            receiver = get_object_or_404(User, username=receiver_username)
+            receiver_keys = get_object_or_404(UserKeys, user=receiver)
+            public_key = serialization.load_pem_public_key(
+                receiver_keys.public_key.encode(),
+                backend=default_backend()
+            )
 
-        # Read the audio file
-        audio_data = audio_file.read()
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
 
-        # Encrypt the audio data using AES
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        encrypted_data = encryptor.update(audio_data) + encryptor.finalize()
+            # Read the audio file
+            audio_data = audio_file.read()
 
-        # Combine IV and encrypted data for storage
-        combined_data = iv + encrypted_data
-        encrypted_audio = base64.b64encode(combined_data).decode()
+            # Encrypt the audio data using AES
+            iv = os.urandom(16)
+            cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+            encrypted_data = encryptor.update(audio_data) + encryptor.finalize()
 
-        return render(request, "audio_encrypt_decrypt.html", {"encrypted_audio": encrypted_audio})
+            # Combine IV and encrypted data
+            combined_data = iv + encrypted_data
+
+            # Create response for file download
+            response = HttpResponse(combined_data, content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="encrypted_audio{file_extension}"'
+            
+            return response
+
+        except Exception as e:
+            print("Encryption Error:", str(e))
+            return render(request, "audio_encrypt_decrypt.html", 
+                        {"error": f"Encryption failed: {str(e)}"})
 
     return render(request, "audio_encrypt_decrypt.html")
 
 def decrypt_audio(request):
     """
-    Handles audio decryption and returns the decrypted audio for playback.
+    Handles audio decryption and returns the decrypted file for download.
     """
     if request.method == "POST":
-        sender_username = request.POST.get("sender_username")
-        encrypted_audio = request.POST.get("encrypted_audio")
-
         try:
+            sender_username = request.POST.get("sender_username")
+            encrypted_file = request.FILES.get("encrypted_audio")
+
+            if not encrypted_file:
+                return render(request, "audio_encrypt_decrypt.html", 
+                            {"error": "Please select an encrypted audio file"})
+
+            # Get file extension
+            file_extension = os.path.splitext(encrypted_file.name)[1]
+
             # Fetch current user's private key
             current_user = request.user
             current_user_keys = get_object_or_404(UserKeys, user=current_user)
@@ -287,91 +331,358 @@ def decrypt_audio(request):
                 backend=default_backend()
             ).derive(shared_key)
 
-            # Decrypt the audio data using AES
-            combined_data = base64.b64decode(encrypted_audio.encode())
+            # Read the encrypted file
+            combined_data = encrypted_file.read()
+            
+            # Extract IV and encrypted data
             iv = combined_data[:16]
             encrypted_data = combined_data[16:]
+
+            # Decrypt the audio data
             cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             decrypted_audio = decryptor.update(encrypted_data) + decryptor.finalize()
 
-            # Encode the decrypted audio in base64 for playback
-            decrypted_audio_base64 = base64.b64encode(decrypted_audio).decode()
-
-            return render(request, "audio_encrypt_decrypt.html", {"decrypted_audio": decrypted_audio_base64})
+            # Create response for file download
+            response = HttpResponse(decrypted_audio, content_type='audio/mpeg')
+            response['Content-Disposition'] = f'attachment; filename="decrypted_audio{file_extension}"'
+            
+            return response
 
         except Exception as e:
-            # Log the error and display a user-friendly message
             print("Decryption Error:", str(e))
-            return render(request, "audio_encrypt_decrypt.html", {"error": "Decryption failed. Please check the input data and try again."})
+            return render(request, "audio_encrypt_decrypt.html", 
+                        {"error": f"Decryption failed: {str(e)}"})
 
     return render(request, "audio_encrypt_decrypt.html")
-'''
+
 from django.shortcuts import render, get_object_or_404
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from PIL import Image
+import numpy as np
+import io
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+import numpy as np
+
+def generate_chaos_sequence(seed, size):
+    """
+    Generate a chaos sequence using the logistic map.
+
+    Args:
+        seed (float): Initial seed value (between 0 and 1).
+        size (int): Length of the chaos sequence to generate.
+
+    Returns:
+        np.ndarray: A 1D array of integers (0-255) representing the chaos sequence.
+    """
+    # Ensure the seed is within the valid range for the logistic map
+    if not (0 < seed < 1):
+        raise ValueError("Seed must be between 0 and 1.")
+
+    # Parameters for the logistic map
+    r = 3.99  # Chaotic parameter
+    sequence = np.zeros(size, dtype=np.uint8)
+
+    # Generate the chaos sequence in chunks for better performance
+    chunk_size = 1000000  # Adjust based on memory constraints
+    x = seed  # Initial value
+
+    for i in range(0, size, chunk_size):
+        end = min(i + chunk_size, size)
+        chunk_len = end - i
+        chunk = np.zeros(chunk_len, dtype=np.float64)
+        chunk[0] = x
+
+        # Vectorized logistic map iteration
+        for j in range(1, chunk_len):
+            chunk[j] = r * chunk[j - 1] * (1 - chunk[j - 1])
+
+        # Store the chunk in the sequence
+        sequence[i:end] = (chunk * 255).astype(np.uint8)
+        x = chunk[-1]  # Update the initial value for the next chunk
+
+    return sequence
+def encrypt_image(request):
+    """
+    Encrypts an image using chaos-based encryption with a shared key derived from ECDH.
+    """
+    if request.method == "POST" and request.FILES.get("image"):
+        try:
+            # Load image
+            image = Image.open(request.FILES["image"])
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            width, height = image.size
+
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
+
+            # Fetch receiver's public key
+            receiver_username = request.POST.get("receiver_username")
+            receiver = get_object_or_404(User, username=receiver_username)
+            receiver_keys = get_object_or_404(UserKeys, user=receiver)
+            public_key = serialization.load_pem_public_key(
+                receiver_keys.public_key.encode(),
+                backend=default_backend()
+            )
+
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
+
+            # Use the derived key to generate the initial seed for chaos
+            initial_seed = int.from_bytes(derived_key[:8], byteorder='big') / (2**64)
+
+            # Convert image to numpy array
+            image_array = np.array(image)
+
+            # Generate chaos sequences
+            pixels = width * height
+            chaos_seq_scramble = generate_chaos_sequence(initial_seed, pixels)
+            chaos_seq_xor = generate_chaos_sequence(initial_seed + 0.1, pixels * 3)
+
+            # Scramble pixels (vectorized)
+            indices = np.argsort(chaos_seq_scramble)
+            scrambled = image_array.reshape(-1, 3)[indices]
+
+            # XOR operation (vectorized)
+            xor_array = scrambled.reshape(-1)
+            xor_array ^= chaos_seq_xor
+            encrypted_array = xor_array.reshape(height, width, 3)
+
+            # Convert to image
+            encrypted_image = Image.fromarray(encrypted_array, 'RGB')
+
+            # Save to BytesIO
+            img_io = io.BytesIO()
+            encrypted_image.save(img_io, 'PNG', optimize=True)
+            img_io.seek(0)
+
+            # Return response
+            response = HttpResponse(img_io.getvalue(), content_type='image/png')
+            response['Content-Disposition'] = f'attachment; filename="encrypted_image.png"'
+            return response
+
+        except Exception as e:
+            logger.error(f"Encryption Error: {str(e)}")
+            return render(request, "image_encrypt_decrypt.html", 
+                        {"error": f"Encryption failed: {str(e)}"})
+
+    return render(request, "image_encrypt_decrypt.html")
+def decrypt_image(request):
+    """
+    Decrypts an image using chaos-based decryption with a shared key derived from ECDH.
+    """
+    if request.method == "POST" and request.FILES.get("encrypted_image"):
+        try:
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
+
+            # Fetch sender's public key
+            sender_username = request.POST.get("sender_username")
+            sender = get_object_or_404(User, username=sender_username)
+            sender_keys = get_object_or_404(UserKeys, user=sender)
+            public_key = serialization.load_pem_public_key(
+                sender_keys.public_key.encode(),
+                backend=default_backend()
+            )
+
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
+
+            # Use the derived key to generate the initial seed for chaos
+            initial_seed = int.from_bytes(derived_key[:8], byteorder='big') / (2**64)
+
+            # Load encrypted image
+            encrypted_image = Image.open(request.FILES["encrypted_image"])
+            if encrypted_image.mode != 'RGB':
+                encrypted_image = encrypted_image.convert('RGB')
+            encrypted_array = np.array(encrypted_image)
+            width, height = encrypted_image.size
+
+            # Generate chaos sequences
+            pixels = width * height
+            chaos_seq_scramble = generate_chaos_sequence(initial_seed, pixels)
+            chaos_seq_xor = generate_chaos_sequence(initial_seed + 0.1, pixels * 3)
+
+            # Reverse XOR (vectorized)
+            xor_array = encrypted_array.reshape(-1)
+            xor_array ^= chaos_seq_xor
+            unxored = xor_array.reshape(-1, 3)
+
+            # Unscramble (vectorized)
+            indices = np.argsort(chaos_seq_scramble)
+            decrypted_array = np.zeros_like(unxored)
+            decrypted_array[indices] = unxored
+            decrypted_array = decrypted_array.reshape(height, width, 3)
+
+            # Convert to image
+            decrypted_image = Image.fromarray(decrypted_array, 'RGB')
+
+            # Save to BytesIO
+            img_io = io.BytesIO()
+            decrypted_image.save(img_io, 'PNG', optimize=True)
+            img_io.seek(0)
+
+            # Return response
+            response = HttpResponse(img_io.getvalue(), content_type='image/png')
+            response['Content-Disposition'] = f'attachment; filename="decrypted_image.png"'
+            return response
+
+        except Exception as e:
+            logger.error(f"Decryption Error: {str(e)}")
+            return render(request, "image_encrypt_decrypt.html", 
+                        {"error": f"Decryption failed: {str(e)}"})
+
+    return render(request, "image_encrypt_decrypt.html")
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.contrib.auth.models import User
+from .models import UserKeys
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 import os
 import base64
+import mimetypes
 
-def encrypt_file(request):
+# List of allowed file extensions
+ALLOWED_EXTENSIONS = {
+    '.txt', '.doc', '.docx', '.pdf', '.xls', '.xlsx', 
+    '.ppt', '.pptx', '.csv', '.rtf', '.odt', '.ods',
+    '.odp', '.zip', '.rar', '.7z'
+}
+
+def is_allowed_file(filename):
+    """Check if the file extension is allowed"""
+    return os.path.splitext(filename)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_file_extension(filename):
+    """Get the file extension including the dot"""
+    return os.path.splitext(filename)[1].lower()
+
+def encrypt_document(request):
     if request.method == "POST":
-        receiver_username = request.POST.get("receiver_username")
-        uploaded_file = request.FILES.get("input_file")
-
-        # Fetch current user's private key
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(),
-            password=None,
-            backend=default_backend()
-        )
-
-        # Fetch receiver's public key
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(
-            receiver_keys.public_key.encode(),
-            backend=default_backend()
-        )
-
-        # Derive shared key using ECDH
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'handshake data',
-            backend=default_backend()
-        ).derive(shared_key)
-
-        # Encrypt the file using AES
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        file_data = uploaded_file.read()
-        encrypted_data = encryptor.update(file_data) + encryptor.finalize()
-
-        # Combine IV and encrypted data for storage
-        combined_data = iv + encrypted_data
-        encrypted_file = ContentFile(combined_data)
-        encrypted_file_name = default_storage.save(f"encrypted_{uploaded_file.name}", encrypted_file)
-
-        return render(request, "encrypt_file.html", {"encrypted_file_name": encrypted_file_name})
-    return render(request, "encrypt_file.html")
-
-def decrypt_file(request):
-    if request.method == "POST":
-        sender_username = request.POST.get("sender_username")
-        encrypted_file = request.FILES.get("encrypted_file")
-
         try:
+            receiver_username = request.POST.get("receiver_username")
+            document_file = request.FILES.get("document_file")
+
+            if not document_file:
+                return render(request, "file_encrypt_decrypt.html", 
+                            {"error": "Please select a file"})
+
+            # Check file extension
+            if not is_allowed_file(document_file.name):
+                return render(request, "file_encrypt_decrypt.html", 
+                            {"error": "File type not supported"})
+
+            # Get file extension
+            file_extension = get_file_extension(document_file.name)
+
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
+
+            # Fetch receiver's public key
+            receiver = get_object_or_404(User, username=receiver_username)
+            receiver_keys = get_object_or_404(UserKeys, user=receiver)
+            public_key = serialization.load_pem_public_key(
+                receiver_keys.public_key.encode(),
+                backend=default_backend()
+            )
+
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
+
+            # Read the document file
+            file_data = document_file.read()
+
+            # Encrypt the document data using AES
+            iv = os.urandom(16)
+            cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+            encrypted_data = encryptor.update(file_data) + encryptor.finalize()
+
+            # Combine IV and encrypted data
+            combined_data = iv + encrypted_data
+
+            # Create response for encrypted file download
+            response = HttpResponse(combined_data, content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="encrypted_document{file_extension}"'
+            
+            # Store the original filename in a custom header
+            original_filename = os.path.splitext(document_file.name)[0]
+            response['X-Original-Filename'] = base64.b64encode(original_filename.encode()).decode()
+
+            return response
+
+        except Exception as e:
+            print("Encryption Error:", str(e))
+            return render(request, "file_encrypt_decrypt.html", 
+                        {"error": f"Encryption failed: {str(e)}"})
+
+    return render(request, "file_encrypt_decrypt.html")
+
+def decrypt_document(request):
+    if request.method == "POST":
+        try:
+            sender_username = request.POST.get("sender_username")
+            encrypted_file = request.FILES.get("encrypted_file")
+
+            if not encrypted_file:
+                return render(request, "file_encrypt_decrypt.html", 
+                            {"error": "Please upload an encrypted file"})
+
+            # Get file extension
+            file_extension = get_file_extension(encrypted_file.name)
+
             # Fetch current user's private key
             current_user = request.user
             current_user_keys = get_object_or_404(UserKeys, user=current_user)
@@ -399,546 +710,152 @@ def decrypt_file(request):
                 backend=default_backend()
             ).derive(shared_key)
 
-            # Decrypt the file using AES
-            file_data = encrypted_file.read()
-            iv = file_data[:16]
-            encrypted_data = file_data[16:]
+            # Read the encrypted file
+            encrypted_data = encrypted_file.read()
+
+            # Extract IV and encrypted content
+            iv = encrypted_data[:16]
+            file_content = encrypted_data[16:]
+
+            # Decrypt the document
             cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
             decryptor = cipher.decryptor()
-            decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+            decrypted_data = decryptor.update(file_content) + decryptor.finalize()
 
-            # Save the decrypted file
-            decrypted_file = ContentFile(decrypted_data)
-            decrypted_file_name = default_storage.save(f"decrypted_{encrypted_file.name}", decrypted_file)
+            # Get the appropriate MIME type
+            mime_type, _ = mimetypes.guess_type(f"file{file_extension}")
+            if not mime_type:
+                mime_type = 'application/octet-stream'
 
-            return render(request, "decrypt_file.html", {"decrypted_file_name": decrypted_file_name})
-
-        except Exception as e:
-            # Log the error and display a user-friendly message
-            print("Decryption Error:", str(e))
-            return render(request, "decrypt_file.html", {"error": "Decryption failed. Please check the input data and try again."})
-
-    return render(request, "decrypt_file.html")
-from django.http import HttpResponse
-from django.core.files.storage import default_storage
-
-def download_file(request, file_name):
-    file_path = default_storage.path(file_name)
-    with open(file_path, 'rb') as file:
-        response = HttpResponse(file.read(), content_type='application/octet-stream')
-        response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-        return response
-'''
-import base64
-import os
-import numpy as np
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.models import User
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from .models import UserKeys
-from PIL import Image
-import io
-
-def logistic_map(seed, length):
-    """Generate a chaotic sequence using the Logistic Map."""
-    x = seed
-    sequence = []
-    r = 3.99  # Chaos parameter (near the edge of chaos)
-    
-    for _ in range(length):
-        x = r * x * (1 - x)  # Logistic map equation
-        sequence.append(int(x * 256) % 256)  # Convert to byte range (0-255)
-    
-    return bytes(sequence)
-def encrypt_image(request):
-    if request.method == "POST" and request.FILES.get("image"):
-        receiver_username = request.POST.get("receiver_username")
-        image_file = request.FILES["image"]
-
-        # Convert image to bytes
-        image_bytes = image_file.read()
-
-        # Fetch current user's private key
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(),
-            password=None,
-            backend=default_backend()
-        )
-
-        # Fetch receiver's public key
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(
-            receiver_keys.public_key.encode(),
-            backend=default_backend()
-        )
-
-        # Derive shared key using ECDH
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'handshake data',
-            backend=default_backend()
-        ).derive(shared_key)
-
-        # Generate a Chaos-Based Key
-        chaos_seed = derived_key[0] / 255.0  # Use first byte of key as chaos seed
-        chaos_key = logistic_map(chaos_seed, 32)  # Generate 32-byte chaotic key
-
-        # Encrypt the image using AES with chaos key
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(chaos_key), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
-        encrypted_image = encryptor.update(image_bytes) + encryptor.finalize()
-
-        # Combine IV and encrypted image for storage
-        combined_data = iv + encrypted_image
-        encrypted_image_base64 = base64.b64encode(combined_data).decode()
-
-        return render(request, "encrypt_image.html", {"encrypted_image": encrypted_image_base64})
-
-    return render(request, "encrypt_image.html")
-def decrypt_image(request):
-    if request.method == "POST":
-        sender_username = request.POST.get("sender_username")
-        encrypted_image = request.POST.get("encrypted_image")
-
-        try:
-            # Fetch current user's private key
-            current_user = request.user
-            current_user_keys = get_object_or_404(UserKeys, user=current_user)
-            private_key = serialization.load_pem_private_key(
-                current_user_keys.private_key.encode(),
-                password=None,
-                backend=default_backend()
-            )
-
-            # Fetch sender's public key
-            sender = get_object_or_404(User, username=sender_username)
-            sender_keys = get_object_or_404(UserKeys, user=sender)
-            public_key = serialization.load_pem_public_key(
-                sender_keys.public_key.encode(),
-                backend=default_backend()
-            )
-
-            # Derive shared key using ECDH
-            shared_key = private_key.exchange(ec.ECDH(), public_key)
-            derived_key = HKDF(
-                algorithm=hashes.SHA256(),
-                length=32,
-                salt=None,
-                info=b'handshake data',
-                backend=default_backend()
-            ).derive(shared_key)
-
-            # Generate the same Chaos-Based Key
-            chaos_seed = derived_key[0] / 255.0
-            chaos_key = logistic_map(chaos_seed, 32)
-
-            # Decrypt the image using AES
-            combined_data = base64.b64decode(encrypted_image.encode())
-            iv = combined_data[:16]
-            encrypted_data = combined_data[16:]
-            cipher = Cipher(algorithms.AES(chaos_key), modes.CFB(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
-            decrypted_image_bytes = decryptor.update(encrypted_data) + decryptor.finalize()
-
-            # Convert decrypted bytes back to image
-            image = Image.open(io.BytesIO(decrypted_image_bytes))
-            image.show()  # Display the decrypted image (or save it)
-
-            return render(request, "encrypt_image.html", {"message": "Decryption Successful. Image is displayed."})
-
-        except Exception as e:
-            print("Decryption Error:", str(e))
-            return render(request, "encrypt_image.html", {"error": "Decryption failed. Please check the input data and try again."})
-
-    return render(request, "encrypt_image.html")
-
-'''
-import os
-import base64
-import io
-from PIL import Image
-from django.shortcuts import render, get_object_or_404
-from django.core.files.base import ContentFile
-from django.http import HttpResponse
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from .models import ImageHistory, UserKeys, User
-
-# 🔹 Chaos-Based Key Generation (Logistic Map)
-def logistic_map(seed, size):
-    chaotic_sequence = []
-    if seed <= 0 or seed >= 1:  # Ensure valid seed
-        seed = 0.5
-    x = seed
-    for _ in range(size):
-        x = 3.99 * x * (1 - x)  # Logistic map formula
-        chaotic_sequence.append(int(x * 255) % 256)
-    return bytes(chaotic_sequence[:32])  # Ensure exactly 32 bytes for AES
-
-# 🔹 Image Encryption
-from Crypto.Util.Padding import pad, unpad
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-import base64
-import json
-from django.shortcuts import render
-from django.http import JsonResponse
-
-def encrypt_image(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            plaintext = data.get("image_data")  # The image data before encryption
+            # Create response for decrypted file download
+            response = HttpResponse(decrypted_data, content_type=mime_type)
+            response['Content-Disposition'] = f'attachment; filename="decrypted_document{file_extension}"'
             
-            if not plaintext:
-                return JsonResponse({"error": "No image data received"}, status=400)
-
-            key = bytes.fromhex("e55bea4cd589fc082277fd061a60ef3bb6cf9af32d94f71c64f32d94f71e6af7")  # 32-byte AES key
-            iv = get_random_bytes(16)  # Generate a random IV (16 bytes)
-
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            padded_data = pad(plaintext.encode(), AES.block_size)  # Pad the plaintext
-            encrypted_data = cipher.encrypt(padded_data)
-
-            encrypted_image_base64 = base64.b64encode(iv + encrypted_data).decode("utf-8")  # Store IV + Encrypted Data
-
-            return JsonResponse({"encrypted_image": encrypted_image_base64})
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    # Handle GET request by rendering a form or initial page (add your template if needed)
-    return render(request, 'encryption/encrypt_image.html')
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import base64
-from Crypto.Cipher import AES
-import json
-
-@csrf_exempt  # TEMPORARY: Remove this later when CSRF token is handled
-def decrypt_image(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            encrypted_image_base64 = data.get("encrypted_data")
-
-            if not encrypted_image_base64:
-                return JsonResponse({"error": "No encrypted data received"}, status=400)
-
-            encrypted_bytes = base64.b64decode(encrypted_image_base64)
-            iv = encrypted_bytes[:16]  # Extract IV (first 16 bytes)
-            encrypted_data = encrypted_bytes[16:]  # The actual encrypted data
-            
-            key = bytes.fromhex("e55bea4cd589fc082277fd061a60ef3bb6cf9af32d94f71c64f32d94f71e6af7")  
-
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            decrypted_bytes = cipher.decrypt(encrypted_data)
-
-            decrypted_image = unpad(decrypted_bytes, AES.block_size).decode('utf-8')  # 🚀 Remove padding
-
-            return JsonResponse({"decrypted_image": decrypted_image})
-
-        except ValueError as ve:
-            return JsonResponse({"error": "Decryption error: " + str(ve)}, status=500)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-# 🔹 Download Image Function
-def download_image(request, image_type, image_id):
-    history_entry = get_object_or_404(ImageHistory, id=image_id)
-
-    if image_type == "decrypted":
-        image_path = history_entry.decrypted_image.path
-        with open(image_path, "rb") as f:
-            response = HttpResponse(f.read(), content_type="image/png")
-            response["Content-Disposition"] = f'attachment; filename="{history_entry.decrypted_image.name}"'
             return response
 
-    return HttpResponse("Invalid request", status=400)'''
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from .models import UserKeys
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from cryptography.hazmat.backends import default_backend
-import base64
+        except Exception as e:
+            print("Decryption Error:", str(e))
+            return render(request, "file_encrypt_decrypt.html", 
+                        {"error": f"Decryption failed: {str(e)}"})
+
+    return render(request, "file_encrypt_decrypt.html")
+
 import os
-import struct
-def encrypt_decrypt(request):
-    if request.method == "POST":
-        action = request.POST.get("action")
-
-        if action == "encrypt":
-            try:
-                receiver_username = request.POST.get("receiver_username")
-                uploaded_file = request.FILES.get("input_file")
-
-                if not uploaded_file:
-                    return render(request, "encrypt_decrypt.html", {"error": "No file uploaded!"})
-
-                # Fetch sender's private key
-                current_user = request.user
-                current_user_keys = get_object_or_404(UserKeys, user=current_user)
-                private_key = serialization.load_pem_private_key(
-                    current_user_keys.private_key.encode(),
-                    password=None,
-                    backend=default_backend()
-                )
-
-                # Fetch receiver's public key
-                receiver = get_object_or_404(User, username=receiver_username)
-                receiver_keys = get_object_or_404(UserKeys, user=receiver)
-                public_key = serialization.load_pem_public_key(
-                    receiver_keys.public_key.encode(),
-                    backend=default_backend()
-                )
-
-                # Derive shared key
-                shared_key = private_key.exchange(ec.ECDH(), public_key)
-                derived_key = HKDF(
-                    algorithm=hashes.SHA256(),
-                    length=32,
-                    salt=None,
-                    info=b'handshake data',
-                    backend=default_backend()
-                ).derive(shared_key)
-
-                # Encrypt file
-                # Encrypt file
-                # Encrypt file
-                iv = os.urandom(16)
-                cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
-                encryptor = cipher.encryptor()
-
-                # Read the file in binary mode
-                file_data = uploaded_file.read()
-
-                # Get the file extension from the uploaded file's name
-                file_extension = os.path.splitext(uploaded_file.name)[1]  # e.g., ".xlsx", ".jpg"
-                file_extension_encoded = file_extension.encode('utf-8')
-
-                # Store the length of the file extension (1 byte)
-                ext_length = len(file_extension_encoded)
-                ext_length_bytes = struct.pack("B", ext_length)  # Store length as a single byte
-
-                # Encrypt the binary data
-                encrypted_data = encryptor.update(file_data) + encryptor.finalize()
-
-                # Combine IV, extension length, extension, and encrypted data
-                combined_data = iv + ext_length_bytes + file_extension_encoded + encrypted_data
-                encrypted_base64 = base64.b64encode(combined_data).decode('utf-8')  # Ensure UTF-8 encoding
-                return render(request, "encrypt_decrypt.html", {"encrypted_file_data": encrypted_base64})
-
-            except Exception as e:
-                return render(request, "encrypt_decrypt.html", {"error": f"Encryption failed: {str(e)}"})
-
-        elif action == "decrypt":
-            try:
-                sender_username = request.POST.get("sender_username")
-                encrypted_file_data = request.POST.get("encrypted_file_data")
-
-                if not encrypted_file_data:
-                    return render(request, "encrypt_decrypt.html", {"error": "No encrypted data provided!"})
-
-                # Fetch keys
-                current_user = request.user
-                current_user_keys = get_object_or_404(UserKeys, user=current_user)
-                private_key = serialization.load_pem_private_key(
-                    current_user_keys.private_key.encode(),
-                    password=None,
-                    backend=default_backend()
-                )
-                sender = get_object_or_404(User, username=sender_username)
-                sender_keys = get_object_or_404(UserKeys, user=sender)
-                public_key = serialization.load_pem_public_key(
-                    sender_keys.public_key.encode(),
-                    backend=default_backend()
-                )
-
-                # Derive shared key
-                shared_key = private_key.exchange(ec.ECDH(), public_key)
-                derived_key = HKDF(
-                    algorithm=hashes.SHA256(),
-                    length=32,
-                    salt=None,
-                    info=b'handshake data',
-                    backend=default_backend()
-                ).derive(shared_key)
-
-                # Decrypt file
-                # Decrypt file
-                # Decrypt file
-                combined_data = base64.b64decode(encrypted_file_data.encode('utf-8'))  # Decode Base64 to binary
-                # Extract IV, extension length, file extension, and encrypted data
-                iv = combined_data[:16]
-                ext_length = struct.unpack("B", combined_data[16:17])[0]  # Extract the stored length
-                file_extension = combined_data[17:17 + ext_length].decode('utf-8')  # Extract extension
-                encrypted_data = combined_data[17 + ext_length:]
-
-                cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
-                decryptor = cipher.decryptor()
-
-                # Decrypt the binary data
-                decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
-
-                # Save the decrypted binary data to a file with the correct extension
-                decrypted_file = ContentFile(decrypted_data)
-                decrypted_file_name = default_storage.save(f"decrypted_file{file_extension}", decrypted_file)  # Use extracted extension
-                decrypted_file_url = default_storage.url(decrypted_file_name)
-                return render(request, "encrypt_decrypt.html", {"decrypted_file_data": decrypted_file_url})
-
-            except Exception as e:
-                return render(request, "encrypt_decrypt.html", {"error": f"Decryption failed: {str(e)}"})
-
-    return render(request, "encrypt_decrypt.html")
-'''
-def encrypt_image(request):
-    if request.method == "POST" and request.FILES.get("image"):
-        receiver_username = request.POST.get("receiver_username")
-        image_file = request.FILES["image"]
-        image_bytes = image_file.read()
-        
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(), password=None
-        )
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(receiver_keys.public_key.encode())
-        
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(), length=32, salt=None, info=b'handshake'
-        ).derive(shared_key)
-
-        iv = os.urandom(16)
-        cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv))
-        encryptor = cipher.encryptor()
-        encrypted_image_bytes = encryptor.update(image_bytes) + encryptor.finalize()
-        encrypted_image = iv + encrypted_image_bytes
-
-        noisy_image = Image.frombytes('L', (image_file.width, image_file.height), encrypted_image_bytes[:image_file.width * image_file.height])
-        noisy_image_io = io.BytesIO()
-        noisy_image.save(noisy_image_io, format='PNG')
-        noisy_image_base64 = base64.b64encode(noisy_image_io.getvalue()).decode()
-        
-        return render(request, "encrypt_image.html", {"encrypted_image": noisy_image_base64})
-    
-    return render(request, "encrypt_image.html")'''
-import os
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.models import User
+import tempfile
+import numpy as np
 from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from .models import UserKeys
 
-def logistic_map(seed, length):
-    """Generate a chaotic sequence using the Logistic Map."""
+
+def generate_chaos_sequence(seed, size):
+    """Generate chaos sequence using logistic map."""
     x = seed
-    sequence = []
-    r = 3.99  # Chaos parameter (near the edge of chaos)
+    r = 3.99  # Chaos parameter
+    sequence = np.zeros(size, dtype=np.float64)
+    sequence[0] = x
     
-    for _ in range(length):
-        x = r * x * (1 - x)  # Logistic map equation
-        sequence.append(int(x * 256) % 256)  # Convert to byte range (0-255)
-    
-    return bytes(sequence)
+    for i in range(1, size):
+        x = r * x * (1 - x)
+        sequence[i] = x
+        
+    return (sequence * 255).astype(np.uint8)
 
 def encrypt_video(request):
+    """
+    Encrypts a video using chaos-based encryption with a shared key derived from ECDH.
+    """
     if request.method == "POST" and request.FILES.get("video"):
-        receiver_username = request.POST.get("receiver_username")
-        video_file = request.FILES["video"]
+        try:
+            # Fetch current user's private key
+            current_user = request.user
+            current_user_keys = get_object_or_404(UserKeys, user=current_user)
+            private_key = serialization.load_pem_private_key(
+                current_user_keys.private_key.encode(),
+                password=None,
+                backend=default_backend()
+            )
 
-        # Fetch current user's private key
-        current_user = request.user
-        current_user_keys = get_object_or_404(UserKeys, user=current_user)
-        private_key = serialization.load_pem_private_key(
-            current_user_keys.private_key.encode(),
-            password=None,
-            backend=default_backend()
-        )
+            # Fetch receiver's public key
+            receiver_username = request.POST.get("receiver_username")
+            receiver = get_object_or_404(User, username=receiver_username)
+            receiver_keys = get_object_or_404(UserKeys, user=receiver)
+            public_key = serialization.load_pem_public_key(
+                receiver_keys.public_key.encode(),
+                backend=default_backend()
+            )
 
-        # Fetch receiver's public key
-        receiver = get_object_or_404(User, username=receiver_username)
-        receiver_keys = get_object_or_404(UserKeys, user=receiver)
-        public_key = serialization.load_pem_public_key(
-            receiver_keys.public_key.encode(),
-            backend=default_backend()
-        )
+            # Derive shared key using ECDH
+            shared_key = private_key.exchange(ec.ECDH(), public_key)
+            derived_key = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b'handshake data',
+                backend=default_backend()
+            ).derive(shared_key)
 
-        # Derive shared key using ECDH
-        shared_key = private_key.exchange(ec.ECDH(), public_key)
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'handshake data',
-            backend=default_backend()
-        ).derive(shared_key)
+            # Use the derived key to generate the initial seed for chaos
+            initial_seed = int.from_bytes(derived_key[:8], byteorder='big') / (2**64)
 
-        # Generate a Chaos-Based Key
-        chaos_seed = derived_key[0] / 255.0  # Use first byte of key as chaos seed
-        chaos_key = logistic_map(chaos_seed, 32)  # Generate 32-byte chaotic key
+            # Create temporary file for the uploaded video
+            video_file = request.FILES["video"]
+            with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_input:
+                for chunk in video_file.chunks():
+                    temp_input.write(chunk)
+                temp_input_path = temp_input.name
 
-        # Generate a random IV
-        iv = os.urandom(16)
+            # Read the video file
+            with open(temp_input_path, 'rb') as f:
+                video_data = f.read()
 
-        # Encrypt the video in chunks
-        cipher = Cipher(algorithms.AES(chaos_key), modes.CFB(iv), backend=default_backend())
-        encryptor = cipher.encryptor()
+            # Generate chaos sequence for encryption
+            chaos_sequence = generate_chaos_sequence(initial_seed, len(video_data))
 
-        # Save the encrypted video to a temporary file
-        encrypted_file_path = "encrypted_video.bin"
-        with open(encrypted_file_path, "wb") as encrypted_file:
-            # Write the IV first
-            encrypted_file.write(iv)
+            # Encrypt the video data using chaos sequence
+            encrypted_data = bytearray()
+            for i, byte in enumerate(video_data):
+                encrypted_data.append(byte ^ chaos_sequence[i])
 
-            # Encrypt and write the video in chunks
-            for chunk in video_file.chunks():
-                encrypted_chunk = encryptor.update(chunk)
-                encrypted_file.write(encrypted_chunk)
-            encrypted_file.write(encryptor.finalize())
+            # Encrypt the chaos-encrypted data using AES
+            iv = os.urandom(16)  # Generate a random IV
+            cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+            final_encrypted_data = encryptor.update(encrypted_data) + encryptor.finalize()
 
-        # Serve the encrypted file for download
-        with open(encrypted_file_path, "rb") as f:
-            response = HttpResponse(f.read(), content_type="application/octet-stream")
-            response['Content-Disposition'] = 'attachment; filename="encrypted_video.bin"'
+            # Combine IV and final encrypted data
+            combined_data = iv + final_encrypted_data
+
+            # Create temporary file for encrypted video
+            temp_output_path = tempfile.mktemp(suffix='.mp4')
+            with open(temp_output_path, 'wb') as f:
+                f.write(combined_data)
+
+            # Prepare encrypted video for download
+            with open(temp_output_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='video/mp4')
+                response['Content-Disposition'] = f'attachment; filename="encrypted_video.mp4"'
+
+            # Cleanup
+            os.unlink(temp_input_path)
+            os.unlink(temp_output_path)
+
             return response
 
-    return render(request, "encrypt_video.html")
+        except Exception as e:
+            print(f"Encryption Error: {str(e)}")
+            return render(request, "video_encrypt_decrypt.html", {"error": str(e)})
 
+    return render(request, "video_encrypt_decrypt.html")
 def decrypt_video(request):
+    """
+    Decrypts a video using chaos-based decryption with a shared key derived from ECDH.
+    """
     if request.method == "POST" and request.FILES.get("encrypted_video"):
-        sender_username = request.POST.get("sender_username")
-        encrypted_video_file = request.FILES["encrypted_video"]
-
         try:
             # Fetch current user's private key
             current_user = request.user
@@ -950,6 +867,7 @@ def decrypt_video(request):
             )
 
             # Fetch sender's public key
+            sender_username = request.POST.get("sender_username")
             sender = get_object_or_404(User, username=sender_username)
             sender_keys = get_object_or_404(UserKeys, user=sender)
             public_key = serialization.load_pem_public_key(
@@ -967,38 +885,55 @@ def decrypt_video(request):
                 backend=default_backend()
             ).derive(shared_key)
 
-            # Generate the same Chaos-Based Key
-            chaos_seed = derived_key[0] / 255.0
-            chaos_key = logistic_map(chaos_seed, 32)
+            # Use the derived key to generate the initial seed for chaos
+            initial_seed = int.from_bytes(derived_key[:8], byteorder='big') / (2**64)
 
-            # Read the IV and encrypted data from the uploaded file
-            encrypted_data = encrypted_video_file.read()
-            iv = encrypted_data[:16]
-            encrypted_data = encrypted_data[16:]
+            # Read the encrypted file
+            encrypted_file = request.FILES["encrypted_video"]
+            combined_data = encrypted_file.read()
 
-            # Decrypt the video in chunks
-            cipher = Cipher(algorithms.AES(chaos_key), modes.CFB(iv), backend=default_backend())
+            # Extract IV and final encrypted data
+            iv = combined_data[:16]
+            final_encrypted_data = combined_data[16:]
+
+            # Decrypt the AES-encrypted data
+            cipher = Cipher(algorithms.AES(derived_key), modes.CFB(iv), backend=default_backend())
             decryptor = cipher.decryptor()
+            chaos_encrypted_data = decryptor.update(final_encrypted_data) + decryptor.finalize()
 
-            # Save the decrypted video to a file
-            decrypted_file_path = "decrypted_video.mp4"
-            with open(decrypted_file_path, "wb") as decrypted_file:
-                # Process the encrypted data in chunks
-                chunk_size = 1024 * 1024  # 1MB chunks
-                for i in range(0, len(encrypted_data), chunk_size):
-                    chunk = encrypted_data[i:i + chunk_size]
-                    decrypted_chunk = decryptor.update(chunk)
-                    decrypted_file.write(decrypted_chunk)
-                decrypted_file.write(decryptor.finalize())
+            # Generate chaos sequence for decryption
+            chaos_sequence = generate_chaos_sequence(initial_seed, len(chaos_encrypted_data))
 
-            # Serve the decrypted file for download
-            with open(decrypted_file_path, "rb") as f:
-                response = HttpResponse(f.read(), content_type="video/mp4")
+            # Decrypt the chaos-encrypted data
+            decrypted_data = bytearray()
+            for i, byte in enumerate(chaos_encrypted_data):
+                decrypted_data.append(byte ^ chaos_sequence[i])
+
+            # Create temporary file for decrypted video
+            temp_output_path = tempfile.mktemp(suffix='.mp4')
+            with open(temp_output_path, 'wb') as f:
+                f.write(decrypted_data)
+
+            # Prepare decrypted video for download
+            with open(temp_output_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type='video/mp4')
                 response['Content-Disposition'] = 'attachment; filename="decrypted_video.mp4"'
-                return response
+
+            # Cleanup
+            os.unlink(temp_output_path)
+
+            return response
 
         except Exception as e:
-            print("Decryption Error:", str(e))
-            return render(request, "encrypt_video.html", {"error": "Decryption failed. Please check the input data and try again."})
+            print(f"Decryption Error: {str(e)}")
+            return render(request, "video_encrypt_decrypt.html", {"error": str(e)})
 
-    return render(request, "encrypt_video.html")
+    return render(request, "video_encrypt_decrypt.html")
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect('login')  # Replace 'login' with your login page URL name

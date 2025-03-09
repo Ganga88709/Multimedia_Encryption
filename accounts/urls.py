@@ -1,5 +1,5 @@
 from django.urls import path,include
-from . import views
+from accounts import views
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -14,9 +14,10 @@ urlpatterns = [
     path('audio/', views.audio_encrypt_decrypt, name='audio_encrypt_decrypt'),
     path('encrypt_audio/', views.encrypt_audio, name='encrypt_audio'),
     path('decrypt_audio/', views.decrypt_audio, name='decrypt_audio'),
-    path('encrypt_decrypt/', views.encrypt_decrypt, name='encrypt_decrypt'),
-    #path('decrypt_file/', views.decrypt_file, name='decrypt_file'),
+    path('encrypt_document/', views.encrypt_document, name='encrypt_document'),
+    path('decrypt_document/', views.decrypt_document, name='decrypt_document'),
     #path('download_file/<str:file_name>/', views.download_file, name='download_file'),
     path('encrypt_video/', views.encrypt_video, name='encrypt_video'),
     path('decrypt_video/', views.decrypt_video, name='decrypt_video'),
+    path('logout/', views.logout_view, name='logout'),
 ]
