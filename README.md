@@ -146,3 +146,23 @@ multimedia-encryption-decryption/
   - Enter the sender's username and the path to the encrypted file.
   - Click "Decrypt". The decrypted file will be saved on the C drive under C:\decrypted_media.
   - If decryption fails (e.g., due to an incorrect sender username), an alert will notify you.
+
+## **Executable File**
+
+1. **How to Generate and Run the Executable**
+
+   Install PyInstaller(if not installed):
+
+       pip install pyinstaller
+
+   Create the Executable:
+
+       pyinstaller --onefile --name=multimedia_encryption_decryption run_django.py
+
+   Run the Executable:
+
+       dist\multimedia_encryption_decryption.exe
+
+
+
+
