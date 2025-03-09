@@ -1,0 +1,9 @@
+Django==4.2.7
+cryptography==41.0.3
+rsa==4.9
+numpy==1.24.3
+Pillow==10.0.0
+opencv-python==4.8.0.76
+numba==0.57.1
+opencv-python
+numba
