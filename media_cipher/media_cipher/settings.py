@@ -74,16 +74,16 @@ WSGI_APPLICATION = "media_cipher.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'users',
-        'USER':'root',
-        'PASSWORD':'Ganga@123',
-        'HOST':'127.0.0.1',
-        'PORT':'3306',
-}
-}
+ DATABASES = {
+     'default': {
+         'ENGINE': 'django.db.backends.mysql',
+         'NAME': 'multimedia_encryption',  # Your database name
+         'USER': 'your_mysql_username',    # Your MySQL username
+         'PASSWORD': 'your_mysql_password',# Your MySQL password
+         'HOST': 'your_mysql_host',        # e.g., "127.0.0.1" or a remote host
+         'PORT': '3306',                   # Default MySQL port
+     }
+ }
 
 
 # Password validation
