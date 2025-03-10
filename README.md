@@ -1,4 +1,4 @@
-# Multimedia Encryption and Decryption Project
+# Multimedia Encryption and Decryption System using AES, ECC and Chaos-Based Techniques
 
 ## Overview
 
