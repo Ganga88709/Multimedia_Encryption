@@ -12,11 +12,7 @@ This project implements a multimedia encryption and decryption system using asym
 - [Installation and Setup](#installation-and-setup)
 - [Database Configuration](#database-configuration)
 - [Execution Steps](#execution-steps)
-- [Results and Metrics](#results-and-metrics)
-- [Project Report](#project-report)
 - [Executable File](#executable-file)
-- [License](#license)
-- [Contact](#contact)
 
 ## Features
 
@@ -30,23 +26,30 @@ This project implements a multimedia encryption and decryption system using asym
 ## Repository Structure
 
 ```plaintext
-multimedia-encryption-decryption/
-├── README.md                      # Overview, installation, and usage instructions.
-├── src/                           # Django project source code.
-│   ├── manage.py                  # Django's command-line utility.
-│   ├── encrypt_decrypt/           # App with encryption/decryption logic.
-│   │   ├── views.py               # Business logic for encryption/decryption.
-│   │   ├── models.py              # Data models.
-│   │   ├── urls.py                # URL routing for the app.
-│   │   └── templates/             # HTML templates.
-│   │         └── encrypt_decrypt.html  # Main UI template.
-│   └── requirements.txt           # Python package dependencies.
-├── executable/                    # Compiled executable (if applicable).
-│   └── multimedia_project.exe     # Example executable for Windows.
-├── report/                        # Project report.
-│   └── Project_Report.pdf         # Detailed project report in PDF format.
-└── results/                       # Results and metrics.
-    └── metrics.txt                # Performance metrics and test results.
+│── media_cipher/                 # Your Django project folder
+│   │── media_cipher/             # Main Django app
+│   │   │── __init__.py
+│   │   │── settings.py
+│   │   │── urls.py
+│   │   │── wsgi.py
+│   │   │── asgi.py
+│   │
+│   │── multimedia_encryption_decryption/                 # Your Django app
+│   │   │── migrations/           # Database migrations (ignored in Git)
+│   │   │── templates/            # HTML templates
+│   │   │── static/               # Static files (CSS, JS, images)
+│   │   │── views.py
+│   │   │── models.py
+│   │   │── urls.py
+│   │   │── admin.py
+│   │
+│   │── multimedia_encryption_decryption.exe #Project Executable
+│   │── manage.py                 # Django project management file
+│   │── requirements.txt          # Dependencies
+│   │
+│── report.pdf              
+│── README.md                     
+
 ```
 
 ## Prerequisites
