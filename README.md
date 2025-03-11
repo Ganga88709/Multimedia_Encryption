@@ -79,7 +79,7 @@ This project implements a multimedia encryption and decryption system using asym
 
 4. **Install Dependencies:**
 
-       pip install -r src/requirements.txt
+       pip install -r requirements.txt
 
 ## **Database Configuration:**
 
