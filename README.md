@@ -63,11 +63,11 @@ This project implements a multimedia encryption and decryption system using asym
 
 1. **Clone the Repository:**
 
-       git clone https://github.com/yourusername/multimedia-encryption-decryption.git
+       git clone https://github.com/Ganga88709/Multimedia_Encryption_Decryption_AES_ECC_Chaos.git
 
 2. **Navigate to the Project Directory:**
     
-       cd multimedia-encryption-decryption
+       cd Multimedia_Encryption_Decryption_AES_ECC_Chaos
 
 3. **Create and Activate a Virtual Environment (Recommended):**
 
@@ -141,13 +141,13 @@ This project implements a multimedia encryption and decryption system using asym
   - Log in with your credentials.
   - Navigate to the encryption page.
   - Upload a multimedia file and enter the receiver's username.
-  - Click "Encrypt". The encrypted file will be stored on the C drive under C:\encrypted_media.
+  - Click "Encrypt". The encrypted file will be stored in Downloads folder.
 
 4 **Decryption Workflow:**
 
   - Log in as the intended receiver.
   - Enter the sender's username and the path to the encrypted file.
-  - Click "Decrypt". The decrypted file will be saved on the C drive under C:\decrypted_media.
+  - Click "Decrypt". The decrypted file will be saved in Downloads folder.
   - If decryption fails (e.g., due to an incorrect sender username), an alert will notify you.
 
 ## **Executable File**
